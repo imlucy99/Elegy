@@ -1,0 +1,199 @@
+:root {
+    --offset-bottom: 40px;      /* jarak HUD dari bawah layar */
+    --offset-right: 18px;       /* jarak HUD dari kanan layar */
+    --scale: 0.55;              /* ubah untuk memperbesar / memperkecil HUD */
+
+    --warn: #ff2a2f;            /* merah peringatan */
+    --green: #19b84a;
+    --blue: #2f7bff;
+    --amber: #e8a200;
+    --off: rgba(20, 22, 26, 0.2);
+
+    --face-a: #fbf9f5;
+    --face-b: #d8d4cc;
+    --ink: #14151a;
+    --zone: #d4161a;
+
+    /* jarum: --ndl-off = jarum biasa, --ndl-on = jarum menyala saat lampu hidup */
+    --ndl-off: #c9231b;
+    --ndl-on: #ff4333;
+    --glow: #ff2a1a;
+
+    --ui: 'Rajdhani', 'Bahnschrift', 'Segoe UI', sans-serif;
+    --digital: 'Orbitron', 'Bahnschrift', 'Arial Narrow', sans-serif;
+}
+
+/* Warna jarum (klik tombol / tekan T) */
+body[data-theme="red"]   { --ndl-off: #c9231b; --ndl-on: #ff4333; --glow: #ff2a1a; }
+body[data-theme="blue"]  { --ndl-off: #1f5fd6; --ndl-on: #4d9bff; --glow: #2f8bff; }
+body[data-theme="amber"] { --ndl-off: #d98a00; --ndl-on: #ffbf2e; --glow: #ffa500; }
+body[data-theme="green"] { --ndl-off: #14a044; --ndl-on: #3dff7d; --glow: #22d65a; }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    overflow: hidden;
+    font-family: var(--ui);
+    color: #fff;
+    user-select: none;
+}
+
+/* Posisi HUD: kanan bawah layar */
+.hud-wrap {
+    position: fixed;
+    right: var(--offset-right);
+    bottom: var(--offset-bottom);
+    width: 1000px;
+    height: 413px;
+    transform: scale(var(--scale));
+    transform-origin: bottom right;
+}
+.cluster { position: relative; width: 100%; height: 100%; }
+.dial { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+/* Preview di browser */
+body.preview {
+    background:
+        radial-gradient(ellipse at 50% 120%, #2a2f38 0%, transparent 60%),
+        linear-gradient(180deg, #3a404a 0%, #14171c 60%, #07080a 100%);
+}
+body.preview .hud-wrap {
+    right: 50%;
+    bottom: 50%;
+    transform: translate(50%, 50%) scale(min(1, calc(100vw / 1040px)));
+    transform-origin: center;
+}
+
+/* ===================== TEKS DIAL ===================== */
+.dial .tk { stroke: var(--ink); stroke-linecap: butt; }
+.dial .num {
+    font-family: var(--ui);
+    font-weight: 700;
+    font-style: italic;
+    fill: var(--ink);
+    text-anchor: middle;
+    dominant-baseline: central;
+}
+.dial .lbl { font-family: var(--ui); font-weight: 700; font-style: italic; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+.dial .zone { fill: var(--zone); }
+.dial .arc { fill: none; stroke: var(--ink); stroke-width: 4; }
+.dial .arc-red { fill: none; stroke: var(--zone); stroke-width: 11; }
+
+/* ===================== MESIN: dial redup saat mati, terang saat hidup ===================== */
+.dial .shade { fill: #07080c; opacity: 0.58; transition: opacity 0.7s ease; }
+.cluster.engine-on .dial .shade { opacity: 0; }
+.dial .backlight { opacity: 0; transition: opacity 0.9s ease; mix-blend-mode: screen; }
+.cluster.engine-on .dial .backlight { opacity: 1; }
+
+/* ===================== LAMPU: jarum ikut menyala ===================== */
+.dial .ndl {
+    fill: var(--ndl-off);
+    filter: drop-shadow(0 0 0 transparent);
+    transition: fill 0.35s ease, filter 0.35s ease;
+}
+.cluster.lights-on .dial .ndl {
+    fill: var(--ndl-on);
+    filter: drop-shadow(0 0 4px var(--glow)) drop-shadow(0 0 11px var(--glow)) drop-shadow(0 0 22px var(--glow));
+}
+.dial .hub-ring { fill: none; stroke: var(--glow); stroke-width: 3; opacity: 0; transition: opacity 0.35s ease; }
+.cluster.lights-on .dial .hub-ring { opacity: 0.85; filter: drop-shadow(0 0 6px var(--glow)); }
+.cluster.redline .dial .zone { animation: blink 0.16s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.35; } }
+
+/* ===================== IKON INDIKATOR ===================== */
+.dial .ind { color: var(--off); transition: color 0.15s ease, filter 0.15s ease, opacity 0.5s ease; }
+.cluster:not(.engine-on) .dial .ind.eng { opacity: 0.3; }
+.dial .ind.active    { color: var(--green); filter: drop-shadow(0 0 4px rgba(25, 184, 74, 0.55)); }
+.dial .ind.high-beam { color: var(--blue);  filter: drop-shadow(0 0 5px rgba(47, 123, 255, 0.7)); }
+.dial .ind.warn      { color: var(--warn);  filter: drop-shadow(0 0 4px rgba(255, 42, 47, 0.55)); }
+.dial .ind.locked    { color: var(--amber); filter: drop-shadow(0 0 4px rgba(232, 162, 0, 0.55)); }
+.dial .ind.low       { color: var(--amber); }
+.dial .ind.crit      { color: var(--warn); }
+.dial .ind.gauge-ico { color: var(--ink); }
+.dial .ind.gauge-ico.low  { color: var(--amber); }
+.dial .ind.gauge-ico.crit { color: var(--warn); }
+
+#headlight .beam-high { display: none; }
+#headlight.high-beam .beam-high { display: inline; }
+#headlight.high-beam .beam-low { display: none; }
+#door-lock .shackle-closed { display: none; }
+#door-lock.locked .shackle-closed { display: inline; }
+#door-lock.locked .shackle-open { display: none; }
+
+.dial .gear { font-family: var(--digital); font-weight: 900; font-size: 40px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; transition: opacity 0.5s ease; }
+.dial .gear.rev { fill: var(--warn); }
+.cluster:not(.engine-on) .dial .gear { opacity: 0.3; }
+
+/* ODO */
+.dial .odo-digit { font-family: var(--digital); font-weight: 600; font-size: 40px; fill: #ececec; text-anchor: middle; dominant-baseline: central; }
+.dial .odo-digit.tenth { fill: #14151a; }
+
+/* ===================== INTRO ===================== */
+.intro {
+    position: absolute;
+    left: 49.9%;
+    top: 31%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    pointer-events: none;
+}
+.intro-text {
+    display: flex;
+    gap: 6px;
+    font-family: var(--digital);
+    font-weight: 900;
+    font-style: italic;
+    font-size: 54px;
+    line-height: 1;
+    color: var(--ink);
+    transform: skewX(-6deg);
+}
+.intro-text span { opacity: 0; display: inline-block; }
+.intro-line { display: block; height: 3px; width: 0; background: var(--ndl-on); box-shadow: 0 0 10px var(--glow); }
+
+.cluster.intro-on .intro { animation: introFade 2.7s ease both; }
+.cluster.intro-on .intro-text span { animation: slamIn 0.45s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
+.cluster.intro-on .intro-line { animation: lineGrow 0.6s 1.0s ease-out forwards; }
+.cluster.intro-on .dial .mph-lbl { opacity: 0; }
+.dial .mph-lbl { transition: opacity 0.4s ease; }
+
+@keyframes introFade { 0% { opacity: 0; } 8% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lineGrow  { to { width: 220px; } }
+@keyframes slamIn {
+    0%   { opacity: 0; transform: translateX(-70px) skewX(-25deg); filter: blur(6px); }
+    70%  { opacity: 1; filter: blur(0); }
+    100% { opacity: 1; transform: none; filter: none; }
+}
+
+/* ===================== TOMBOL (preview / ?button) ===================== */
+.theme-btn {
+    display: none;
+    position: fixed; top: 8px; right: 8px; z-index: 10;
+    align-items: center; gap: 6px;
+    padding: 4px 9px; border-radius: 999px; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(10, 11, 13, 0.55); color: rgba(255, 255, 255, 0.8);
+    font: 700 10px/1 var(--ui); letter-spacing: 1.5px; text-transform: uppercase;
+    opacity: 0.75; transition: opacity 0.2s, border-color 0.2s, transform 0.1s;
+}
+.theme-btn i { width: 8px; height: 8px; border-radius: 50%; background: var(--ndl-on); box-shadow: 0 0 6px var(--glow); }
+.theme-btn:hover { opacity: 1; border-color: var(--ndl-on); }
+.theme-btn:active { transform: scale(0.95); }
+body.preview .theme-btn, body.show-btn .theme-btn { display: flex; }
+
+.dev { display: none; position: fixed; top: 8px; left: 8px; z-index: 10; gap: 6px; }
+body.preview .dev { display: flex; }
+.dev button {
+    padding: 6px 12px; border-radius: 6px; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(10, 11, 13, 0.6); color: #fff;
+    font: 700 12px/1 var(--ui); letter-spacing: 1px;
+}
+.dev button.on { background: rgba(34, 214, 90, 0.25); border-color: #22d65a; }

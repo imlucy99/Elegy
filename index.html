@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JGVRP Speedometer HUD</title>
+  <meta name="description" content="Custom speedometer HUD analog untuk JGVRP: RPM, speed MPH, fuel, oil press. Mesin nyala = dial terang, lampu nyala = jarum menyala." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Tombol ganti warna jarum (tampil di preview/browser, atau di game lewat ?button). Shortcut: tekan T -->
+  <button class="theme-btn" id="theme-btn" type="button" title="Ganti warna jarum (T)"><i></i><span id="theme-name">Merah</span></button>
+
+  <!-- Panel tes (hanya di preview ?demo): tombol mesin & lampu. Shortcut: E = mesin, L = lampu -->
+  <div class="dev" id="dev">
+    <button type="button" id="dev-engine">Mesin: OFF</button>
+    <button type="button" id="dev-lights">Lampu: OFF</button>
+  </div>
+
+  <div class="hud-wrap">
+    <div class="cluster" id="hud">
+      <!-- Semua gauge, tick, angka, jarum & ikon digambar oleh script.js -->
+      <svg id="dial" class="dial" viewBox="40 90 1694 700" xmlns="http://www.w3.org/2000/svg"></svg>
+
+      <!-- Intro: tulisan ganti lewat data-text -->
+      <div class="intro" id="intro">
+        <div class="intro-text" id="intro-text" data-text="OBEY">OBEY</div>
+        <i class="intro-line"></i>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

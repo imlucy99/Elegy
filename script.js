@@ -170,16 +170,16 @@ function buildDial() {
     s += icon('seatbelts', 'eng warn', 896, 511, 1.6, ICON_SEATBELT);
     s += icon('door-lock', '', 952, 511, 1.6, ICON_LOCK);
 
-    // ----- ODO -----
-    s += `<circle cx="755" cy="603" r="10" fill="#18181b" stroke="#444" stroke-width="2"/><circle cx="1017" cy="603" r="10" fill="#18181b" stroke="#444" stroke-width="2"/>
-    <rect x="788" y="572" width="198" height="62" rx="5" fill="#050506" stroke="#2d2e33" stroke-width="2"/>
-    <rect x="943" y="577" width="38" height="52" rx="3" fill="#d9d5cc"/>`;
+    // ----- ODO: jendela hitam, 6 digit putih (gaya contoh) -----
+    s += `<g class="odo">
+    <circle cx="755" cy="603" r="10" fill="#18181b" stroke="#444" stroke-width="2"/><circle cx="1017" cy="603" r="10" fill="#18181b" stroke="#444" stroke-width="2"/>
+    <rect x="788" y="570" width="198" height="66" rx="9" fill="#050506"/>`;
     for (let i = 0; i < 6; i++) {
-        const x = 806 + i * 31.2;
-        if (i > 0) s += `<line x1="${x - 15.6}" y1="574" x2="${x - 15.6}" y2="632" stroke="rgba(255,255,255,0.14)" stroke-width="1.5"/>`;
-        s += `<text class="odo-digit${i === 5 ? ' tenth' : ''}" id="odo${i}" x="${i === 5 ? 962 : x}" y="604">0</text>`;
+        const x = 805 + i * 31.4;
+        if (i > 0) s += `<line x1="${x - 15.7}" y1="576" x2="${x - 15.7}" y2="630" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/>`;
+        s += `<text class="odo-digit" id="odo${i}" x="${x}" y="604">0</text>`;
     }
-    s += txt('lbl', 886, 652, 22, 'ODO');
+    s += `</g>` + txt('lbl', 886, 656, 22, 'ODO');
 
     // ----- jarum + hub (paling atas) -----
     s += needle('nd-fuel', FUEL, 104, 32) + needle('nd-oil', OIL, 108, 32);
@@ -199,21 +199,6 @@ function setNeedle(el, key, g, a) {
 // Helper kelas untuk elemen SVG (className SVG bukan string biasa)
 function setCls(el, cls) { if (el.getAttribute('class') !== cls) el.setAttribute('class', cls); }
 function setText(el, t) { t = String(t); if (el.textContent !== t) el.textContent = t; }
-
-// ---------- Teks intro ----------
-(function () {
-    const el = $('intro-text');
-    if (el === NOOP_EL) return;
-    const chars = Array.from((el.dataset.text || el.textContent || 'OBEY').trim().toUpperCase());
-    el.textContent = '';
-    chars.forEach((ch, i) => {
-        const span = document.createElement('span');
-        span.textContent = ch === ' ' ? '\u00A0' : ch;
-        span.style.animationDelay = (0.3 + i * 0.09).toFixed(2) + 's';
-        el.appendChild(span);
-    });
-    el.style.fontSize = Math.max(26, Math.min(54, Math.floor(210 / (chars.length * 0.95)))) + 'px';
-})();
 
 // ---------- State ----------
 const state = {
@@ -354,16 +339,10 @@ window.setEngine = function (on) {
     kick();
 };
 
-// ---------- Intro ----------
-let introTimer;
+// ---------- Sapuan jarum (tanpa tulisan intro) ----------
 window.playIntro = function () {
-    elHud.classList.remove('intro-on');
-    void elHud.offsetWidth;                       // restart animasi CSS
-    elHud.classList.add('intro-on');
     if (state.engine) bootUntil = performance.now() + BOOT_MS;
     kick();
-    clearTimeout(introTimer);
-    introTimer = setTimeout(() => elHud.classList.remove('intro-on'), 2750);
 };
 
 // ---------- Suara peringatan (Web Audio, tanpa file mp3) ----------
@@ -426,7 +405,7 @@ window.setHudSound = function (on, volume) {
 
 let lastSeatBeep = -Infinity, lastFuelChime = -Infinity;
 setInterval(() => {
-    if (!SND.enabled || elHud.classList.contains('intro-on')) return;
+    if (!SND.enabled) return;
     const now = performance.now();
     const seatWarn = state.engine && !state.belted && state.mps > SND.seatbeltMinSpeed;
     if (!seatWarn) lastSeatBeep = -Infinity;

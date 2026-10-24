@@ -15,19 +15,19 @@
     --zone: #d4161a;
 
     /* jarum: --ndl-off = jarum biasa, --ndl-on = jarum menyala saat lampu hidup */
-    --ndl-off: #c9231b;
-    --ndl-on: #ff4333;
-    --glow: #ff2a1a;
+    --ndl-off: #8e1b16;
+    --ndl-on: #e8372c;
+    --glow: #e8372c;
 
     --ui: 'Rajdhani', 'Bahnschrift', 'Segoe UI', sans-serif;
     --digital: 'Orbitron', 'Bahnschrift', 'Arial Narrow', sans-serif;
 }
 
 /* Warna jarum (klik tombol / tekan T) */
-body[data-theme="red"]   { --ndl-off: #c9231b; --ndl-on: #ff4333; --glow: #ff2a1a; }
-body[data-theme="blue"]  { --ndl-off: #1f5fd6; --ndl-on: #4d9bff; --glow: #2f8bff; }
-body[data-theme="amber"] { --ndl-off: #d98a00; --ndl-on: #ffbf2e; --glow: #ffa500; }
-body[data-theme="green"] { --ndl-off: #14a044; --ndl-on: #3dff7d; --glow: #22d65a; }
+body[data-theme="red"]   { --ndl-off: #8e1b16; --ndl-on: #e8372c; --glow: #e8372c; }
+body[data-theme="blue"]  { --ndl-off: #173f94; --ndl-on: #3f84ec; --glow: #3f84ec; }
+body[data-theme="amber"] { --ndl-off: #94610a; --ndl-on: #f0a91c; --glow: #f0a91c; }
+body[data-theme="green"] { --ndl-off: #0f6b2d; --ndl-on: #2fcf66; --glow: #2fcf66; }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -96,10 +96,10 @@ body.preview .hud-wrap {
 }
 .cluster.lights-on .dial .ndl {
     fill: var(--ndl-on);
-    filter: drop-shadow(0 0 4px var(--glow)) drop-shadow(0 0 11px var(--glow)) drop-shadow(0 0 22px var(--glow));
+    filter: drop-shadow(0 0 2px rgba(255, 70, 50, 0.35));
 }
 .dial .hub-ring { fill: none; stroke: var(--glow); stroke-width: 3; opacity: 0; transition: opacity 0.35s ease; }
-.cluster.lights-on .dial .hub-ring { opacity: 0.85; filter: drop-shadow(0 0 6px var(--glow)); }
+.cluster.lights-on .dial .hub-ring { opacity: 0.45; }
 .cluster.redline .dial .zone { animation: blink 0.16s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0.35; } }
 
@@ -127,50 +127,10 @@ body.preview .hud-wrap {
 .dial .gear.rev { fill: var(--warn); }
 .cluster:not(.engine-on) .dial .gear { opacity: 0.3; }
 
-/* ODO */
-.dial .odo-digit { font-family: var(--digital); font-weight: 600; font-size: 40px; fill: #ececec; text-anchor: middle; dominant-baseline: central; }
-.dial .odo-digit.tenth { fill: #14151a; }
-
-/* ===================== INTRO ===================== */
-.intro {
-    position: absolute;
-    left: 49.9%;
-    top: 31%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    opacity: 0;
-    pointer-events: none;
-}
-.intro-text {
-    display: flex;
-    gap: 6px;
-    font-family: var(--digital);
-    font-weight: 900;
-    font-style: italic;
-    font-size: 54px;
-    line-height: 1;
-    color: var(--ink);
-    transform: skewX(-6deg);
-}
-.intro-text span { opacity: 0; display: inline-block; }
-.intro-line { display: block; height: 3px; width: 0; background: var(--ndl-on); box-shadow: 0 0 10px var(--glow); }
-
-.cluster.intro-on .intro { animation: introFade 2.7s ease both; }
-.cluster.intro-on .intro-text span { animation: slamIn 0.45s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
-.cluster.intro-on .intro-line { animation: lineGrow 0.6s 1.0s ease-out forwards; }
-.cluster.intro-on .dial .mph-lbl { opacity: 0; }
-.dial .mph-lbl { transition: opacity 0.4s ease; }
-
-@keyframes introFade { 0% { opacity: 0; } 8% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes lineGrow  { to { width: 220px; } }
-@keyframes slamIn {
-    0%   { opacity: 0; transform: translateX(-70px) skewX(-25deg); filter: blur(6px); }
-    70%  { opacity: 1; filter: blur(0); }
-    100% { opacity: 1; transform: none; filter: none; }
-}
+/* ODO: jendela hitam, digit putih tebal; ikut gelap saat mesin mati */
+.dial .odo { transition: opacity 0.7s ease; }
+.cluster:not(.engine-on) .dial .odo { opacity: 0.35; }
+.dial .odo-digit { font-family: var(--ui); font-weight: 700; font-style: normal; font-size: 46px; fill: #f2f2f2; text-anchor: middle; dominant-baseline: central; }
 
 /* ===================== TOMBOL (preview / ?button) ===================== */
 .theme-btn {

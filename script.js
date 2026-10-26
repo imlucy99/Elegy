@@ -6,7 +6,6 @@
      setGear(n)               setHeadlights(0 off | 1 low | 2 high)
      setSeatbelts(bool)       updateLockStatus(state)
      setOdometer(miles)       setEngine(bool)
-     setTheme('red'|'blue'|'amber'|'green')
    Efek:
      setEngine(true)  -> dial jadi terang + jarum menyapu (kontak ON)
      setHeadlights(1|2) -> semua jarum menyala (glow), seperti lampu dashboard asli
@@ -476,8 +475,6 @@ window.addEventListener('message', function (event) {
             case 'setLights': window.setHeadlights(Number(d.state !== undefined ? d.state : d.lights) || 0); break;
             case 'setSeatbelts': window.setSeatbelts(!!d.state); break;
             case 'setOdometer': window.setOdometer(Number(d.distance) || 0); break;
-            case 'setTheme': window.setTheme(d.theme !== undefined ? d.theme : d.state); break;
-            case 'nextTheme': window.nextTheme(); break;
             case 'toggleVbox': window.toggleVbox(); break;
             case 'setVbox': window.setVbox(d.state !== undefined ? !!d.state : true); break;
             case 'resetVbox': window.resetVbox(); break;
@@ -488,21 +485,6 @@ window.addEventListener('message', function (event) {
         }
     } catch (e) { /* abaikan pesan rusak */ }
 });
-
-// ---------- Warna jarum (tema) ----------
-const THEMES = [['red', 'Merah'], ['blue', 'Biru'], ['amber', 'Amber'], ['green', 'Hijau']];
-let themeIdx = 0;
-window.setTheme = function (name) {
-    let i = typeof name === 'number' ? name : THEMES.findIndex((t) => t[0] === name);
-    if (i < 0) i = 0;
-    themeIdx = ((i % THEMES.length) + THEMES.length) % THEMES.length;
-    document.body.dataset.theme = THEMES[themeIdx][0];
-    setText($('theme-name'), THEMES[themeIdx][1]);
-    try { localStorage.setItem('hudTheme', THEMES[themeIdx][0]); } catch (e) {}
-};
-window.nextTheme = () => window.setTheme(themeIdx + 1);
-$('theme-btn').addEventListener('click', window.nextTheme);
-window.addEventListener('keydown', (e) => { if (e.key === 't' || e.key === 'T') window.nextTheme(); });
 
 // ---------- Nilai awal ----------
 window.setSpeed(0);
@@ -515,13 +497,6 @@ window.setSeatbelts(false);
 window.setEngine(false);
 window.updateLockStatus(false);
 window.setOdometer(0);
-(function () {
-    const q = new URLSearchParams(location.search);
-    if (q.has('button')) document.body.classList.add('show-btn');
-    let saved = q.get('theme');
-    try { saved = saved || localStorage.getItem('hudTheme'); } catch (e) {}
-    window.setTheme(saved || 'red');
-})();
 window.playIntro();
 
 // ---------- VBOX Performance Box Touch ----------

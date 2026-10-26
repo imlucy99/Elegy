@@ -478,6 +478,9 @@ window.addEventListener('message', function (event) {
             case 'setOdometer': window.setOdometer(Number(d.distance) || 0); break;
             case 'setTheme': window.setTheme(d.theme !== undefined ? d.theme : d.state); break;
             case 'nextTheme': window.nextTheme(); break;
+            case 'toggleVbox': window.toggleVbox(); break;
+            case 'setVbox': window.setVbox(d.state !== undefined ? !!d.state : true); break;
+            case 'resetVbox': window.resetVbox(); break;
             case 'muteSeatbelt': window.setSeatbeltSoundEnabled(false); break;
             case 'unmuteSeatbelt': window.setSeatbeltSoundEnabled(true); break;
             case 'setSeatbeltSound': window.setSeatbeltSoundEnabled(d.enabled !== undefined ? !!d.enabled : !d.disabled); break;
@@ -520,6 +523,111 @@ window.setOdometer(0);
     window.setTheme(saved || 'red');
 })();
 window.playIntro();
+
+// ---------- VBOX Performance Box Touch ----------
+// Otomatis mengukur: 0-60 mph, 0-100 km/h, 0-100 mph, 100-200 km/h, 1/8 mil, 1/4 mil (+ kecepatan trap).
+// Mulai saat mobil berhenti total lalu jalan; ikut berjalan walau panel ditutup.
+// API: toggleVbox() | setVbox(bool) | resetVbox()  (juga lewat postMessage & tombol V)
+const VB_STILL = 0.28, VB_MID_A = 100 / 3.6, VB_MID_B = 200 / 3.6;
+const VB_TESTS = [
+    { id: 'z60',   n: '0-60',    u: 'MPH',  type: 'v', v: 60 / MPS_TO_MPH },
+    { id: 'z100k', n: '0-100',   u: 'KM/H', type: 'v', v: 100 / 3.6 },
+    { id: 'z100m', n: '0-100',   u: 'MPH',  type: 'v', v: 100 / MPS_TO_MPH },
+    { id: 'mid',   n: '100-200', u: 'KM/H', type: 'mid' },
+    { id: 'e',     n: '1/8',     u: 'MIL',  type: 'd', d: 201.168 },
+    { id: 'q',     n: '1/4',     u: 'MIL',  type: 'd', d: 402.336 },
+];
+const VB = { open: false, unit: 'mph', phase: 'wait', t0: 0, dist: 0, lastT: 0, lastV: 0, stillSince: 0, g: 0, res: {}, midT: null, lastMark: 0, frozen: 0 };
+(function () {
+    $('vbox').innerHTML = `
+    <div class="vb-top"><span class="vb-logo">VBOX</span><span class="vb-sub">PERFORMANCE BOX TOUCH</span><span class="vb-gps"><i></i>GPS 100Hz</span></div>
+    <div class="vb-screen">
+      <div class="vb-status" id="vb-status">STOP TO ARM</div>
+      <div class="vb-main">
+        <div class="vb-speed" id="vb-speed" title="Klik untuk ganti MPH / KM/H"><b id="vb-spd">0</b><em id="vb-unit">MPH</em></div>
+        <div class="vb-time"><b id="vb-t">0.00</b><em>S</em></div>
+      </div>
+      <div class="vb-g">G <b id="vb-g">+0.00</b></div>
+      <div class="vb-rows">${VB_TESTS.map((t) => `<div class="vb-row" id="vbr-${t.id}"><span class="n">${t.n}<small>${t.u}</small></span><b class="t" id="vbt-${t.id}">--.--</b><span class="x" id="vbx-${t.id}"></span></div>`).join('')}</div>
+    </div>
+    <div class="vb-btns"><button type="button" id="vb-reset">RESET</button><button type="button" id="vb-close">CLOSE</button></div>`;
+})();
+const vbSpeedK = () => (VB.unit === 'mph' ? MPS_TO_MPH : 3.6);
+function vbRender(now) {
+    const run = VB.phase === 'run', el = run ? (now - VB.t0) / 1000 : VB.frozen;
+    setText($('vb-spd'), Math.round(state.mps * vbSpeedK()));
+    setText($('vb-unit'), VB.unit === 'mph' ? 'MPH' : 'KM/H');
+    setText($('vb-t'), el.toFixed(2));
+    setText($('vb-g'), (VB.g >= 0 ? '+' : '-') + Math.abs(VB.g).toFixed(2));
+    const st = $('vb-status'), label = run ? 'RUNNING' : VB.phase === 'ready' ? 'READY - GO!' : 'STOP TO ARM';
+    setText(st, label); if (st.className !== 'vb-status ' + VB.phase) st.className = 'vb-status ' + VB.phase;
+    for (const t of VB_TESTS) {
+        const r = VB.res[t.id], row = $('vbr-' + t.id);
+        const live = run && !r && (t.type !== 'mid' || VB.midT !== null);
+        setText($('vbt-' + t.id), r ? r.t.toFixed(2) : live ? (t.type === 'mid' ? el - VB.midT : el).toFixed(2) : '--.--');
+        setText($('vbx-' + t.id), r && r.v ? Math.round(r.v * vbSpeedK()) + (VB.unit === 'mph' ? ' mph' : ' km/h') : '');
+        const cls = 'vb-row' + (r ? ' done' : live ? ' live' : '');
+        if (row.className !== cls) row.className = cls;
+    }
+}
+function vbTick() {
+    const now = performance.now(), v = state.mps;
+    if (!VB.lastT) { VB.lastT = now; VB.lastV = v; return; }
+    const dt = (now - VB.lastT) / 1000, lv = VB.lastV;
+    if (dt <= 0) return;
+    VB.lastT = now; VB.lastV = v;
+    if (dt > 0.3) return;                                   // tab sempat tertahan: lewati sampel ini
+    VB.g += ((v - lv) / dt / 9.81 - VB.g) * 0.15;
+    const still = v <= VB_STILL, frac = (target) => clamp01((v - target) / ((v - lv) || 1));
+    if (VB.phase === 'run') {
+        const prev = VB.dist, el = (now - VB.t0) / 1000;
+        VB.dist += ((v + lv) / 2) * dt;
+        const mark = (id, t, extra) => { VB.res[id] = Object.assign({ t }, extra); };
+        for (const t of VB_TESTS) {
+            if (VB.res[t.id] || t.type === 'mid') continue;
+            if (t.type === 'v' && v >= t.v) { const tt = el - dt * frac(t.v); mark(t.id, tt); VB.lastMark = Math.max(VB.lastMark, tt); }
+            if (t.type === 'd' && VB.dist >= t.d) { const tt = el - dt * clamp01((VB.dist - t.d) / ((VB.dist - prev) || 1)); mark(t.id, tt, { v }); VB.lastMark = Math.max(VB.lastMark, tt); }
+        }
+        if (!VB.res.mid) {                                  // 100 -> 200 km/h (gagal kalau kecepatan turun di bawah 100 sebelum 200)
+            if (lv < VB_MID_A && v >= VB_MID_A && VB.midT === null) VB.midT = el - dt * frac(VB_MID_A);
+            if (VB.midT !== null && v < VB_MID_A) VB.midT = null;
+            if (VB.midT !== null && v >= VB_MID_B) { const tt = el - dt * frac(VB_MID_B); mark('mid', tt - VB.midT); VB.lastMark = Math.max(VB.lastMark, tt); }
+        }
+        if (still) {
+            if (!VB.stillSince) VB.stillSince = now;
+            else if (now - VB.stillSince > 1000) { VB.frozen = VB.lastMark || (VB.stillSince - VB.t0) / 1000; VB.phase = 'ready'; }
+        } else VB.stillSince = 0;
+    } else if (still) {
+        if (!VB.stillSince) VB.stillSince = now;
+        else if (now - VB.stillSince > 400) VB.phase = 'ready';
+    } else {
+        VB.stillSince = 0;
+        if (VB.phase === 'ready') {                         // LAUNCH: waktu 0 diinterpolasi tepat saat lepas dari diam
+            VB.phase = 'run'; VB.res = {}; VB.midT = null; VB.lastMark = 0; VB.frozen = 0; VB.dist = 0;
+            VB.t0 = now - dt * 1000 * frac(VB_STILL);
+        }
+    }
+    if (VB.open) vbRender(now);
+}
+setInterval(vbTick, 40);
+window.setVbox = function (on) {
+    VB.open = !!on;
+    $('vbox').classList.toggle('open', VB.open);
+    $('vbox-btn').classList.toggle('on', VB.open);
+    if (VB.open) vbRender(performance.now());
+};
+window.toggleVbox = () => window.setVbox(!VB.open);
+window.resetVbox = function () {
+    VB.res = {}; VB.midT = null; VB.lastMark = 0; VB.frozen = 0; VB.stillSince = 0;
+    if (VB.phase === 'run') VB.phase = 'wait';
+    if (VB.open) vbRender(performance.now());
+};
+$('vbox-btn').addEventListener('click', window.toggleVbox);
+$('vb-close').addEventListener('click', () => window.setVbox(false));
+$('vb-reset').addEventListener('click', window.resetVbox);
+$('vb-speed').addEventListener('click', () => { VB.unit = VB.unit === 'mph' ? 'kmh' : 'mph'; vbRender(performance.now()); });
+window.addEventListener('keydown', (e) => { if (e.key === 'v' || e.key === 'V') window.toggleVbox(); });
+try { if (new URLSearchParams(location.search).has('nobutton')) document.body.classList.add('no-btn'); } catch (e) {}
 
 // ---------- Demo (otomatis di preview Netlify atau dengan ?demo) ----------
 const params = new URLSearchParams(location.search);

@@ -136,7 +136,7 @@ body.preview .hud-wrap {
 /* ===================== TOMBOL (preview / ?button) ===================== */
 .theme-btn {
     display: none;
-    position: fixed; top: 8px; right: 8px; z-index: 10;
+    position: fixed; top: 8px; right: 104px; z-index: 10;
     align-items: center; gap: 6px;
     padding: 4px 9px; border-radius: 999px; cursor: pointer;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -158,3 +158,66 @@ body.preview .dev { display: flex; }
     font: 700 12px/1 var(--ui); letter-spacing: 1px;
 }
 .dev button.on { background: rgba(34, 214, 90, 0.25); border-color: #22d65a; }
+
+/* ===================== VBOX Performance Box Touch ===================== */
+.vbox-btn {
+    position: fixed; top: 8px; right: 8px; z-index: 20;
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 11px; border-radius: 999px; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(10, 11, 13, 0.62); color: #fff;
+    font: 700 11px/1 var(--ui); letter-spacing: 1.5px;
+    opacity: 0.8; transition: opacity 0.2s, border-color 0.2s, transform 0.1s;
+}
+.vbox-btn i { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background 0.2s, box-shadow 0.2s; }
+.vbox-btn span { color: #36c3ff; }
+.vbox-btn:hover { opacity: 1; border-color: #36c3ff; }
+.vbox-btn:active { transform: scale(0.95); }
+.vbox-btn.on i { background: #22d65a; box-shadow: 0 0 6px #22d65a; }
+body.no-btn .vbox-btn { display: none; }
+
+.vbox {
+    position: fixed; top: 44px; right: 8px; z-index: 19; width: 340px;
+    padding: 10px 10px 12px; border-radius: 16px;
+    background: linear-gradient(160deg, #3a3d43 0%, #17181b 38%, #0c0c0e 100%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    color: #fff; font-family: var(--ui);
+    opacity: 0; transform: translateY(-12px) scale(0.95); transform-origin: top right;
+    pointer-events: none; transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.vbox.open { opacity: 1; transform: none; pointer-events: auto; }
+.vbox .vb-top { display: flex; align-items: baseline; gap: 8px; padding: 0 4px 8px; }
+.vbox .vb-logo { font: 900 17px/1 var(--digital); letter-spacing: 2px; }
+.vbox .vb-sub { font-size: 9px; letter-spacing: 1.6px; color: #9aa0a8; flex: 1; }
+.vbox .vb-gps { font-size: 10px; letter-spacing: 1px; color: #9aa0a8; display: flex; align-items: center; gap: 4px; }
+.vbox .vb-gps i { width: 7px; height: 7px; border-radius: 50%; background: #22d65a; box-shadow: 0 0 5px #22d65a; animation: vbgps 1.2s steps(2) infinite; }
+@keyframes vbgps { 50% { opacity: 0.25; } }
+.vbox .vb-screen { background: #050608; border-radius: 9px; padding: 8px 10px 6px; border: 2px solid #26282d; }
+.vbox .vb-status { font-size: 11px; letter-spacing: 2px; font-weight: 700; color: #ffb800; text-align: center; }
+.vbox .vb-status.ready { color: #22d65a; }
+.vbox .vb-status.run { color: #36c3ff; }
+.vbox .vb-main { display: flex; justify-content: space-between; align-items: flex-end; padding: 4px 0 2px; }
+.vbox .vb-speed, .vbox .vb-time { display: flex; align-items: baseline; gap: 4px; }
+.vbox .vb-speed { cursor: pointer; }
+.vbox .vb-main b { font: 800 34px/1 var(--digital); }
+.vbox .vb-time b { color: #36c3ff; }
+.vbox .vb-main em { font: 700 11px/1 var(--ui); font-style: normal; color: #9aa0a8; letter-spacing: 1px; }
+.vbox .vb-g { font-size: 11px; color: #9aa0a8; letter-spacing: 1px; text-align: right; }
+.vbox .vb-g b { color: #fff; font-family: var(--digital); font-weight: 600; }
+.vbox .vb-rows { margin-top: 4px; border-top: 1px solid #23252a; }
+.vbox .vb-row { display: grid; grid-template-columns: 1fr 70px 78px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid #16181b; }
+.vbox .vb-row .n { font-size: 15px; font-weight: 700; letter-spacing: 1px; }
+.vbox .vb-row .n small { margin-left: 4px; font-size: 10px; color: #9aa0a8; }
+.vbox .vb-row .t { font: 600 15px/1 var(--digital); text-align: right; color: #4a4e56; }
+.vbox .vb-row .x { font-size: 10px; text-align: right; color: #9aa0a8; }
+.vbox .vb-row.live .t { color: #ffb800; }
+.vbox .vb-row.done .t { color: #22d65a; }
+.vbox .vb-btns { display: flex; gap: 8px; padding-top: 9px; }
+.vbox .vb-btns button {
+    flex: 1; padding: 7px 0; border-radius: 7px; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2); background: #1d1f23; color: #fff;
+    font: 700 12px/1 var(--ui); letter-spacing: 2px;
+}
+.vbox .vb-btns button:hover { border-color: #36c3ff; }
+.vbox .vb-btns button:active { transform: scale(0.97); }

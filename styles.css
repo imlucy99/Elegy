@@ -100,8 +100,6 @@ body.preview .hud-wrap {
 }
 .dial .hub-ring { fill: none; stroke: var(--glow); stroke-width: 3; opacity: 0; transition: opacity 0.35s ease; }
 .cluster.lights-on .dial .hub-ring { opacity: 0.45; }
-.cluster.redline .dial .zone { animation: blink 0.16s steps(2) infinite; }
-@keyframes blink { 50% { opacity: 0.35; } }
 
 /* ===================== IKON INDIKATOR ===================== */
 .dial .ind { color: var(--off); transition: color 0.15s ease, filter 0.15s ease, opacity 0.5s ease; }
@@ -131,6 +129,9 @@ body.preview .hud-wrap {
 .dial .odo { transition: opacity 0.7s ease; }
 .cluster:not(.engine-on) .dial .odo { opacity: 0.35; }
 .dial .odo-digit { font-family: var(--ui); font-weight: 700; font-style: normal; font-size: 46px; fill: #f2f2f2; text-anchor: middle; dominant-baseline: central; }
+.dial .odo-digit.odo-last { fill: #0b0b0d; }   /* digit desimal: angka gelap di drum putih */
+.dial .odo-strip { transition: transform 0.45s cubic-bezier(0.45, 0, 0.2, 1); }
+.dial .odo-strip.snap { transition: none; }
 
 /* ===================== TOMBOL (preview / ?button) ===================== */
 .theme-btn {

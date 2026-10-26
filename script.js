@@ -16,6 +16,7 @@ const MPS_TO_MPH = 2.236936;
 const MAX_MPH = 200;
 const MAX_RPM = 8;          // skala tachometer (x1000)
 const REDLINE = 6.2;        // mulai zona merah (x1000)
+const LIMITER = 0.96;       // RPM (0-1) mulai dianggap kena limiter -> jarum geter
 
 const NOOP_EL = document.createElement('div');   // pengaman kalau ada elemen yang dihapus dari HTML
 const $ = (id) => document.getElementById(id) || NOOP_EL;
@@ -101,6 +102,8 @@ const ICON_LOCK = `
 const ICON_FUEL = `<path fill="currentColor" stroke="none" d="M19.77 7.23l.01-.01-3.72-3.72L15 4.56l2.11 2.11c-.94.36-1.61 1.26-1.61 2.33 0 1.38 1.12 2.5 2.5 2.5.36 0 .69-.08 1-.21v7.21c0 .55-.45 1-1 1s-1-.45-1-1V14c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v16h10v-7.5h1.5v5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V9c0-.69-.28-1.32-.73-1.77zM12 10H6V5h6v5zm6 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>`;
 const ICON_OIL = `<path fill="currentColor" stroke="none" d="M2.5 10h4.2l1.3-2h2V6.5H8V5h6v1.5h-2V8h2.5l2 1.8 5-2.8 1 1.2-6.6 7.3H8.4L7 13H2.5zM20.2 14.6c0-.9 1.1-2.3 1.1-2.3s1.1 1.4 1.1 2.3c0 .6-.5 1.1-1.1 1.1s-1.1-.5-1.1-1.1z"/>`;
 
+const ODO_N = 6, ODO_W = 31.4, ODO_ROW = 56, ODO_Y = 575, ODO_X0 = 792.8;   // geometri jendela ODO
+
 function buildDial() {
     const sA = (v) => SPD.a0 + (v / MAX_MPH) * SPD.sweep;      // sudut speedo
     const rA = (v) => RPM.a0 + (v / MAX_RPM) * RPM.sweep;       // sudut tacho
@@ -113,6 +116,10 @@ function buildDial() {
       <radialGradient id="faceG" cx="0.5" cy="0.5" r="0.5">
         <stop offset="0.45" style="stop-color:var(--face-a)"/><stop offset="1" style="stop-color:var(--face-b)"/>
       </radialGradient>
+      <linearGradient id="drumShade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#000" stop-opacity="0.65"/><stop offset="0.3" stop-color="#000" stop-opacity="0"/>
+        <stop offset="0.7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.65"/>
+      </linearGradient>
       <radialGradient id="hubG" cx="0.4" cy="0.35" r="0.75">
         <stop offset="0" stop-color="#34353a"/><stop offset="0.6" stop-color="#0c0c0e"/><stop offset="1" stop-color="#030304"/>
       </radialGradient>
@@ -170,14 +177,20 @@ function buildDial() {
     s += icon('seatbelts', 'eng warn', 896, 511, 1.6, ICON_SEATBELT);
     s += icon('door-lock', '', 952, 511, 1.6, ICON_LOCK);
 
-    // ----- ODO: jendela hitam, 6 digit putih (gaya contoh) -----
+    // ----- ODO: drum angka berputar; 5 digit hitam-putih + digit terakhir (desimal) putih -----
     s += `<g class="odo">
     <circle cx="755" cy="603" r="10" fill="#18181b" stroke="#444" stroke-width="2"/><circle cx="1017" cy="603" r="10" fill="#18181b" stroke="#444" stroke-width="2"/>
     <rect x="788" y="570" width="198" height="66" rx="9" fill="#050506"/>`;
-    for (let i = 0; i < 6; i++) {
-        const x = 805 + i * 31.4;
-        if (i > 0) s += `<line x1="${x - 15.7}" y1="576" x2="${x - 15.7}" y2="630" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/>`;
-        s += `<text class="odo-digit" id="odo${i}" x="${x}" y="604">0</text>`;
+    for (let i = 0; i < ODO_N; i++) {
+        const x = ODO_X0 + i * ODO_W, last = i === ODO_N - 1;
+        let rows = '';
+        for (let r = 0; r <= 10; r++) rows += `<text class="odo-digit${last ? ' odo-last' : ''}" x="${ODO_W / 2}" y="${ODO_ROW / 2 + r * ODO_ROW + 2}">${r % 10}</text>`;
+        s += `<svg x="${x}" y="${ODO_Y}" width="${ODO_W}" height="${ODO_ROW}" viewBox="0 0 ${ODO_W} ${ODO_ROW}" overflow="hidden">
+          <rect width="${ODO_W}" height="${ODO_ROW}" fill="${last ? '#f2f2f2' : '#050506'}"/>
+          <g class="odo-strip snap" id="odo${i}">${rows}</g>
+          <rect width="${ODO_W}" height="${ODO_ROW}" fill="url(#drumShade)"/>
+          ${i > 0 && !last ? `<line x1="0" y1="0" x2="0" y2="${ODO_ROW}" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/>` : ''}
+        </svg>`;
     }
     s += `</g>` + txt('lbl', 886, 656, 22, 'ODO');
 
@@ -218,7 +231,6 @@ function kick() {
     lastFrame = performance.now() - FRAME_MS;
     rafId = requestAnimationFrame(frame);
 }
-let lastRed = null;
 function frame(now) {
     rafId = 0;
     if (now - lastFrame < FRAME_MS - 2) { rafId = requestAnimationFrame(frame); return; }
@@ -234,11 +246,16 @@ function frame(now) {
     }
 
     const tSpd = booting ? Math.max(sw, state.mph / MAX_MPH) : state.mph / MAX_MPH;
-    const tRpm = booting ? sw : state.engine ? state.rpm : 0;
+    const limiter = !booting && state.engine && state.rpm >= LIMITER;
+    let tRpm = booting ? sw : state.engine ? state.rpm : 0;
+    if (limiter) {   // rev limiter: jarum mental-mental di dekat batas (fuel cut), seperti mobil asli
+        const cut = Math.sin((now / 1000) * 2 * Math.PI * 11) > 0;
+        tRpm = state.rpm - (cut ? 0.04 + Math.random() * 0.02 : Math.random() * 0.012);
+    }
     const tFuel = booting ? Math.max(sw, state.fuel) : state.engine ? state.fuel : 0;
     const tOil = booting ? sw : state.engine ? state.health : 0;
 
-    const kf = booting ? 1 : Math.min(1, dt * 12), ks = booting ? 1 : Math.min(1, dt * 4);
+    const kf = booting ? 1 : Math.min(1, dt * (limiter ? 45 : 12)), ks = booting ? 1 : Math.min(1, dt * 4);
     const ease = (cur, tgt, k) => (Math.abs(tgt - cur) < 0.0004 ? tgt : cur + (tgt - cur) * k);
     state.spdShown = ease(state.spdShown, tSpd, kf);
     state.rpmShown = ease(state.rpmShown, tRpm, kf);
@@ -250,10 +267,7 @@ function frame(now) {
     setNeedle(ndFuel, 'fuel', FUEL, FUEL.a0 + clamp01(state.fuelShown) * FUEL.sweep);
     setNeedle(ndOil, 'oil', OIL, OIL.a0 + clamp01(state.oilShown) * OIL.sweep);
 
-    const red = state.rpmShown >= REDLINE / MAX_RPM;
-    if (red !== lastRed) { lastRed = red; elHud.classList.toggle('redline', red); }
-
-    if (booting || state.spdShown !== tSpd || state.rpmShown !== tRpm || state.fuelShown !== tFuel || state.oilShown !== tOil) {
+    if (booting || limiter || state.spdShown !== tSpd || state.rpmShown !== tRpm || state.fuelShown !== tFuel || state.oilShown !== tOil) {
         rafId = requestAnimationFrame(frame);
     }
 }
@@ -319,14 +333,36 @@ window.setSeatbelts = function (val) {
     setCls($('seatbelts'), on ? 'ind eng active' : 'ind eng warn');
 };
 
-// ---------- 9. Odometer (mil) -> 5 digit + 1 digit desimal ----------
+// ---------- 9. Odometer (mil) -> 5 digit + 1 digit desimal, drum berputar ----------
 let lastOdo = '';
+const odoCells = [];
+for (let i = 0; i < ODO_N; i++) {
+    const el = $('odo' + i), c = { el, row: 0 };
+    el.addEventListener('transitionend', () => {          // 9 -> 0: setelah putar ke "0" cadangan, lompat balik ke baris 0 tanpa animasi
+        if (c.row === 10) odoMove(c, 0, false);
+    });
+    odoCells.push(c);
+}
+function odoMove(c, row, animate) {
+    c.row = row;
+    if (!animate) c.el.classList.add('snap');
+    c.el.style.transform = `translateY(${-row * ODO_ROW}px)`;
+    if (!animate) { void c.el.getBoundingClientRect(); c.el.classList.remove('snap'); }
+}
 window.setOdometer = function (distance) {
     const n = Math.max(0, Math.min(999999, Math.floor(Number(distance || 0) * 10)));
-    const s = String(n).padStart(6, '0');
+    const s = String(n).padStart(ODO_N, '0');
     if (s === lastOdo) return;
+    const animate = lastOdo !== '' && state.engine;      // pertama kali / mesin mati: langsung set tanpa animasi
     lastOdo = s;
-    for (let i = 0; i < 6; i++) setText($('odo' + i), s[i]);
+    for (let i = 0; i < ODO_N; i++) {
+        const c = odoCells[i], d = +s[i];
+        if (c.row === 10) odoMove(c, 0, false);
+        if (c.row === d) continue;
+        if (!animate) odoMove(c, d, false);
+        else if (d < c.row && c.row - d > 5) odoMove(c, 10, true);   // lewat 9 -> 0: putar maju terus
+        else odoMove(c, d, true);
+    }
 };
 
 // ---------- 10. MESIN: nyala = dial terang + jarum menyapu ----------
@@ -522,7 +558,7 @@ if (isPreview) {
         while (gear < 6 && mph > GEAR_TOP[gear]) gear++;
         while (gear > 1 && mph < GEAR_TOP[gear - 1] - 6) gear--;
         const lo = GEAR_TOP[gear - 1], hi = GEAR_TOP[gear];
-        const rpm = 0.11 + clamp01((mph - lo) / (hi - lo)) * (throttle ? 0.82 : 0.6);
+        const rpm = 0.11 + clamp01((mph - lo) / (hi - lo)) * (throttle ? 0.89 : 0.6);
         health = Math.max(180, health - 0.9); if (health <= 180) health = 1000;
         fuel = fuel <= 4 ? 86 : fuel - 0.02;
         odo += (mph * 0.05) / 3600;
